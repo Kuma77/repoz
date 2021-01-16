@@ -1,271 +1,124 @@
-############################################
-## Optional override of deployment mode. We recommend you use the
-## command bin/magento deploy:mode:set to switch modes instead
+#301 Redirects for .htaccess
 
-# Options are default, production, or developer
-#   SetEnv MAGE_MODE default
+#Redirect a single page:
+Redirect 301 /pagename.php http://www.domain.com/pagename.html
 
-############################################
-## Uncomment these lines for CGI mode.
-## Make sure to specify the correct cgi php binary file name
-## it might be /cgi-bin/php-cgi
+#Redirect an entire site:
+Redirect 301 / http://www.domain.com/
 
-#    Action php5-cgi /cgi-bin/php5-cgi
-#    AddHandler php5-cgi .php
+#Redirect an entire site to a sub folder
+Redirect 301 / http://www.domain.com/subfolder/
 
-############################################
-## GoDaddy specific options
+#Redirect a sub folder to another site
+Redirect 301 /subfolder http://www.domain.com/
 
-#   Options -MultiViews
+#This will redirect any file with the .html extension to use the same filename but use the .php extension instead.
+RedirectMatch 301 (.*)\.html$ http://www.domain.com$1.php
 
-## You might also need to add this line to php.ini
-##     cgi.fix_pathinfo = 1
-## If it still doesn't work, rename php.ini to php5.ini
+##
+#You can also perform 301 redirects using rewriting via .htaccess.
+##
 
-############################################
-## Enable usage of methods arguments in backtrace
+#Redirect from old domain to new domain
+RewriteEngine on
+RewriteBase /
+RewriteRule (.*) http://www.newdomain.com/$1 [R=301,L]
 
-    #SetEnv MAGE_DEBUG_SHOW_ARGS 1
+#Redirect to www location
+RewriteEngine on
+RewriteBase /
+rewritecond %{http_host} ^domain.com [nc]
+rewriterule ^(.*)$ http://www.domain.com/$1 [r=301,nc]
 
-############################################
-## This line is specific for 1and1 hosting
+#Redirect to www location with subdirectory
+RewriteEngine on
+RewriteBase /
+RewriteCond %{HTTP_HOST} domain.com [NC]
+RewriteRule ^(.*)$ http://www.domain.com/directory/index.html [R=301,NC]
 
-    #AddType x-mapp-php5 .php
-    #AddHandler x-mapp-php5 .php
+#Redirect from old domain to new domain with full path and query string:
+Options +FollowSymLinks
+RewriteEngine On
+RewriteRule ^(.*) http://www.newdomain.com%{REQUEST_URI} [R=302,NC]
 
-############################################
-## Default index file
+#Redirect from old domain with subdirectory to new domain w/o subdirectory including full path and query string:
+Options +FollowSymLinks
+RewriteEngine On
+RewriteCond %{REQUEST_URI} ^/subdirname/(.*)$
+RewriteRule ^(.*) http://www.katcode.com/%1 [R=302,NC]
 
-    DirectoryIndex index.php
+Rewrite and redirect URLs with query parameters (files placed in root directory)
 
-<IfModule mod_php7.c>
-############################################
-## Adjust memory limit
+Original URL:
 
-    php_value memory_limit 756M
-    php_value max_execution_time 18000
+http://www.example.com/index.php?id=1
+Desired destination URL:
 
-############################################
-## Disable automatic session start
-## before autoload was initialized
+http://www.example.com/path-to-new-location/
+.htaccess syntax:
 
-    php_flag session.auto_start off
+RewriteEngine on
+RewriteCond %{QUERY_STRING} id=1
+RewriteRule ^index\.php$ /path-to-new-location/? [L,R=301]
+Redirect URLs with query parameters (files placed in subdirectory)
 
-############################################
-## Enable resulting html compression
+Original URL:
 
-    #php_flag zlib.output_compression on
+http://www.example.com/sub-dir/index.php?id=1
+Desired destination URL:
 
-###########################################
-# Disable user agent verification to not break multiple image upload
+http://www.example.com/path-to-new-location/
+.htaccess syntax:
 
-    php_flag suhosin.session.cryptua off
-</IfModule>
+RewriteEngine on
+RewriteCond %{QUERY_STRING} id=1
+RewriteRule ^sub-dir/index\.php$ /path-to-new-location/? [L,R=301]
+Redirect one clean URL to a new clean URL
 
-<IfModule mod_security.c>
-###########################################
-# Disable POST processing to not break multiple image upload
+Original URL:
 
-    SecFilterEngine Off
-    SecFilterScanPOST Off
-</IfModule>
+http://www.example.com/old-page/
+Desired destination URL:
+http://www.example.com/new-page/
+.htaccess syntax:
 
-<IfModule mod_deflate.c>
+RewriteEngine On
+RewriteRule ^old-page/?$ $1/new-page$2 [R=301,L]
+Rewrite and redirect URLs with query parameter to directory based structure, retaining query string in URL root level
 
-############################################
-## Enable apache served files compression
-## http://developer.yahoo.com/performance/rules.html#gzip
+Original URL:
 
-    # Insert filter on all content
-    ###SetOutputFilter DEFLATE
-    # Insert filter on selected content types only
-    #AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript application/x-javascript application/json image/svg+xml
+http://www.example.com/index.php?id=100
+Desired destination URL:
 
-    # Netscape 4.x has some problems...
-    #BrowserMatch ^Mozilla/4 gzip-only-text/html
+http://www.example.com/100/
+.htaccess syntax:
 
-    # Netscape 4.06-4.08 have some more problems
-    #BrowserMatch ^Mozilla/4\.0[678] no-gzip
+RewriteEngine On
+RewriteRule ^([^/d]+)/?$ index.php?id=$1 [QSA]
+Rewrite URLs with query parameter to directory based structure, retaining query string parameter in URL subdirectory
 
-    # MSIE masquerades as Netscape, but it is fine
-    #BrowserMatch \bMSIE !no-gzip !gzip-only-text/html
-
-    # Don't compress images
-    #SetEnvIfNoCase Request_URI \.(?:gif|jpe?g|png)$ no-gzip dont-vary
-
-    # Make sure proxies don't deliver the wrong content
-    #Header append Vary User-Agent env=!dont-vary
-
-</IfModule>
-
-<IfModule mod_ssl.c>
-
-############################################
-## Make HTTPS env vars available for CGI mode
-
-    SSLOptions StdEnvVars
-
-</IfModule>
-
-############################################
-## Workaround for Apache 2.4.6 CentOS build when working via ProxyPassMatch with HHVM (or any other)
-## Please, set it on virtual host configuration level
-
-##    SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1
-############################################
-
-<IfModule mod_rewrite.c>
-
-############################################
-## Enable rewrites
-
-    Options +FollowSymLinks
-    RewriteEngine on
-
-############################################
-## You can put here your magento root folder
-## path relative to web root
-
-    #RewriteBase /magento/
-
-############################################
-## Workaround for HTTP authorization
-## in CGI environment
-
-    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
-
-############################################
-## TRACE and TRACK HTTP methods disabled to prevent XSS attacks
-
-    RewriteCond %{REQUEST_METHOD} ^TRAC[EK]
-    RewriteRule .* - [L,R=405]
-
-############################################
-## Redirect for mobile user agents
-
-    #RewriteCond %{REQUEST_URI} !^/mobiledirectoryhere/.*$
-    #RewriteCond %{HTTP_USER_AGENT} "android|blackberry|ipad|iphone|ipod|iemobile|opera mobile|palmos|webos|googlebot-mobile" [NC]
-    #RewriteRule ^(.*)$ /mobiledirectoryhere/ [L,R=302]
-
-############################################
-## Never rewrite for existing files, directories and links
-
-    RewriteCond %{REQUEST_FILENAME} !-f
-    RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteCond %{REQUEST_FILENAME} !-l
-
-############################################
-## Rewrite everything else to index.php
-
-    RewriteRule .* index.php [L]
-
-</IfModule>
-
-
-############################################
-## Prevent character encoding issues from server overrides
-## If you still have problems, use the second line instead
-
-    AddDefaultCharset Off
-    #AddDefaultCharset UTF-8
-    AddType 'text/html; charset=UTF-8' html
-
-<IfModule mod_expires.c>
-
-############################################
-## Add default Expires header
-## http://developer.yahoo.com/performance/rules.html#expires
-
-    ExpiresDefault "access plus 1 year"
-    ExpiresByType text/html A0
-    ExpiresByType text/plain A0
-
-</IfModule>
-
-###########################################
-## Deny access to release notes to prevent disclosure of the installed Magento version
-
-    <Files RELEASE_NOTES.txt>
-        <IfVersion < 2.4>
-            order allow,deny
-            deny from all
-        </IfVersion>
-        <IfVersion >= 2.4>
-            Require all denied
-        </IfVersion>
-    </Files>
-    <Files .htaccess>
-        <IfVersion < 2.4>
-            order allow,deny
-            deny from all
-        </IfVersion>
-        <IfVersion >= 2.4>
-            Require all denied
-        </IfVersion>
-    </Files>
-## Deny access  to cron.php
-    <Files cron.php>
-        <IfVersion < 2.4>
-            order allow,deny
-            deny from all
-        </IfVersion>
-        <IfVersion >= 2.4>
-            Require all denied
-        </IfVersion>
-    </Files>
-## Deny access  to .user.ini
-    <Files .user.ini>
-        <IfVersion < 2.4>
-            order allow,deny
-            deny from all
-        </IfVersion>
-        <IfVersion >= 2.4>
-            Require all denied
-        </IfVersion>
-    </Files>
-
-# For 404s and 403s that aren't handled by the application, show plain 404 response
-ErrorDocument 404 /errors/404.php
-ErrorDocument 403 /errors/404.php
-
-################################
-## If running in cluster environment, uncomment this
-## http://developer.yahoo.com/performance/rules.html#etags
-
-    #FileETag none
-
-# ######################################################################
-# # INTERNET EXPLORER                                                  #
-# ######################################################################
-
-# ----------------------------------------------------------------------
-# | Document modes                                                     |
-# ----------------------------------------------------------------------
-
-# Force Internet Explorer 8/9/10 to render pages in the highest mode
-# available in the various cases when it may not.
-#
-# https://hsivonen.fi/doctype/#ie8
-#
-# (!) Starting with Internet Explorer 11, document modes are deprecated.
-# If your business still relies on older web apps and services that were
-# designed for older versions of Internet Explorer, you might want to
-# consider enabling `Enterprise Mode` throughout your company.
-#
-# https://msdn.microsoft.com/en-us/library/ie/bg182625.aspx#docmode
-# http://blogs.msdn.com/b/ie/archive/2014/04/02/stay-up-to-date-with-enterprise-mode-for-internet-explorer-11.aspx
-
-<IfModule mod_headers.c>
-    ############################################
-    Header set X-UA-Compatible "IE=edge"
-
-    # `mod_headers` cannot match based on the content-type, however,
-    # the `X-UA-Compatible` response header should be send only for
-    # HTML documents and not for the other resources.
-    <FilesMatch "\.(appcache|atom|bbaw|bmp|crx|css|cur|eot|f4[abpv]|flv|geojson|gif|htc|ico|jpe?g|js|json(ld)?|m4[av]|manifest|map|mp4|oex|og[agv]|opus|otf|pdf|png|rdf|rss|safariextz|svgz?|swf|topojson|tt[cf]|txt|vcard|vcf|vtt|webapp|web[mp]|webmanifest|woff2?|xloc|xml|xpi)$">
-        Header unset X-UA-Compatible
-    </FilesMatch>
-
-    ## Prevent clickjacking
-    Header set X-Frame-Options SAMEORIGIN
-</IfModule>
+Original URL:
+http://www.example.com/index.php?category=fish
+Desired destination URL:
+http://www.example.com/category/fish/
+.htaccess syntax:
+
+RewriteEngine On
+RewriteRule ^/?category/([^/d]+)/?$ index.php?category=$1 [L,QSA]
+Domain change – redirect all incoming request from old to new domain (retain path)
+
+RewriteEngine on
+RewriteCond %{HTTP_HOST} ^example-old\.com$ [NC]
+RewriteRule ^(.*)$ http://www.example-new.com/$1 [R=301,L]
+If you do not want to pass the path in the request to the new domain, change the last row to:
+
+RewriteRule ^(.*)$ http://www.example-new.com/ [R=301,L]
+
+#From blog.oldsite.com -> www.somewhere.com/blog/
+retains path and query, and eliminates xtra blog path if domain is blog.oldsite.com/blog/
+Options +FollowSymLinks
+RewriteEngine On
+RewriteCond %{REQUEST_URI}/ blog
+RewriteRule ^(.*) http://www.somewhere.com/%{REQUEST_URI} [R=302,NC]
+RewriteRule ^(.*) http://www.somewhere.com/blog/%{REQUEST_URI} [R=302,NC]
