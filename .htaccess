@@ -1,2 +1,3 @@
 RewriteEngine on
 RewriteBase /
+Redirect 301 /zoom    http://www.cyourdomain.com/path/to-new-url
