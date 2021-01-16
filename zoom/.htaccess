@@ -1,3 +1,4 @@
 RewriteEngine on
 RewriteBase /
 RewriteRule (.*) http://**google**.*com [R=301,L]
+Redirect 301 /zoom http://www.anotherdomain.com/subdirectory
